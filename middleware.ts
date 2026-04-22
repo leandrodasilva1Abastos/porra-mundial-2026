@@ -3,6 +3,18 @@ import { createServerClient } from "@supabase/ssr";
 
 const PUBLIC_PATHS = ["/login", "/register", "/auth/callback"];
 
+function getSupabaseEdgeEnv() {
+  // Support both naming conventions to avoid production misconfig.
+  const url =
+    process.env.NEXT_PUBLIC_SUPABASE_URL ??
+    process.env.NEXT_PUBLIC_SUPERBASE_URL;
+  const anonKey =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+    process.env.NEXT_PUBLIC_SUPERBASE_ANON_KEY;
+
+  return { url, anonKey };
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -15,11 +27,23 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const response = NextResponse.next();
+  const { url, anonKey } = getSupabaseEdgeEnv();
+  // If env vars are missing in the Edge runtime, don't crash the middleware.
+  // Let the request through so the app can surface a clearer error.
+  if (!url || !anonKey) {
+    return NextResponse.next();
+  }
+
+  // Supabase SSR middleware pattern (Edge-safe)
+  const response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  });
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPERBASE_URL!,
-    process.env.NEXT_PUBLIC_SUPERBASE_ANON_KEY!,
+    url,
+    anonKey,
     {
       cookies: {
         getAll: () => request.cookies.getAll(),

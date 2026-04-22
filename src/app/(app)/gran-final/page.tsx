@@ -1,11 +1,16 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { upsertMatchPrediction } from "@/app/(app)/predictions/actions";
+import { redirect } from "next/navigation";
 
 export default async function GranFinalPage() {
   const supabase = createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
 
   const { data: finalMatch } = await supabase
     .from("matches")
@@ -17,7 +22,7 @@ export default async function GranFinalPage() {
     ? await supabase
         .from("match_prediction_cutoffs")
         .select("cutoff_at")
-        .eq("user_id", user!.id)
+        .eq("user_id", user.id)
         .eq("match_id", finalMatch.id)
         .maybeSingle()
     : { data: null };
@@ -26,7 +31,7 @@ export default async function GranFinalPage() {
     ? await supabase
         .from("match_predictions")
         .select("home_score,away_score")
-        .eq("user_id", user!.id)
+        .eq("user_id", user.id)
         .eq("match_id", finalMatch.id)
         .maybeSingle()
     : { data: null };

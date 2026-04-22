@@ -1,11 +1,16 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { upsertMatchPrediction } from "@/app/(app)/predictions/actions";
+import { redirect } from "next/navigation";
 
 export default async function PartidoDelDiaPage() {
   const supabase = createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
 
   const { data: matches, error } = await supabase
     .from("matches")
@@ -20,7 +25,7 @@ export default async function PartidoDelDiaPage() {
   const { data: preds } = await supabase
     .from("match_predictions")
     .select("match_id,home_score,away_score")
-    .eq("user_id", user!.id);
+    .eq("user_id", user.id);
 
   const predByMatch = new Map<string, any>();
   for (const p of preds ?? []) predByMatch.set((p as any).match_id, p);

@@ -1,11 +1,16 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { upsertWinnerPrediction } from "./actions";
+import { redirect } from "next/navigation";
 
 export default async function Fase2Page() {
   const supabase = createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
 
   const { data: matches, error } = await supabase
     .from("matches")
@@ -19,7 +24,7 @@ export default async function Fase2Page() {
   const { data: preds } = await supabase
     .from("match_winner_predictions")
     .select("match_id,winner_team_id")
-    .eq("user_id", user!.id);
+    .eq("user_id", user.id);
 
   const predByMatch = new Map<string, string>();
   for (const p of preds ?? []) predByMatch.set((p as any).match_id, (p as any).winner_team_id);
